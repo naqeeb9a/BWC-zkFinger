@@ -148,14 +148,19 @@ class _ZKFingerScreenState extends State<ZKFingerScreen> {
                     }
                     return Column(
                       children: [
-                        ClipRRect(
-                            borderRadius: BorderRadius.circular(15),
-                            child: Image.memory(
-                              image!,
-                              height: 200,
-                              width: 150,
-                              fit: BoxFit.cover,
-                            )),
+                        image == null
+                            ? LottieBuilder.asset(
+                                "assets/fpScanner.json",
+                                width: 200,
+                              )
+                            : ClipRRect(
+                                borderRadius: BorderRadius.circular(15),
+                                child: Image.memory(
+                                  image,
+                                  height: 200,
+                                  width: 150,
+                                  fit: BoxFit.cover,
+                                )),
                         const SizedBox(
                           height: 15,
                         ),
@@ -209,38 +214,7 @@ class _ZKFingerScreenState extends State<ZKFingerScreen> {
                       var type = FeedbackType.light;
                       Vibrate.feedback(type);
                     }
-                    fingerIndex = 1;
-                    counter = 1;
-                    fCounter = 1;
-                    fingerData = {
-                      "finger1": {
-                        "image1": null,
-                        "image2": null,
-                        "image3": null,
-                      },
-                      "finger2": {
-                        "image1": null,
-                        "image2": null,
-                        "image3": null,
-                      },
-                      "finger3": {
-                        "image1": null,
-                        "image2": null,
-                        "image3": null,
-                      },
-                      "finger4": {
-                        "image1": null,
-                        "image2": null,
-                        "image3": null,
-                      },
-                    };
-                    fingerDataFp = {
-                      "saveFp1": null,
-                      "saveFp2": null,
-                    };
-                    await stopScanning();
-                    await initializeFp();
-                    setState(() {});
+                    resetLastFp();
                   }),
               const SizedBox(
                 height: 10,
@@ -483,5 +457,61 @@ class _ZKFingerScreenState extends State<ZKFingerScreen> {
         ),
       ],
     );
+  }
+
+  resetLastFp() async {
+    counter = 1;
+    counter = 1;
+    fCounter = 1;
+    fingerData = {
+      "finger$fingerIndex": {
+        "image1": null,
+        "image2": null,
+        "image3": null,
+      },
+    };
+    fingerDataFp = {
+      "saveFp1": null,
+    };
+    await stopScanning();
+    await initializeFp();
+    setState(() {});
+  }
+
+  resetAllFp() async {
+    fingerIndex = 1;
+    counter = 1;
+    fCounter = 1;
+    fingerData = {
+      "finger1": {
+        "image1": null,
+        "image2": null,
+        "image3": null,
+      },
+      "finger2": {
+        "image1": null,
+        "image2": null,
+        "image3": null,
+      },
+      "finger3": {
+        "image1": null,
+        "image2": null,
+        "image3": null,
+      },
+      "finger4": {
+        "image1": null,
+        "image2": null,
+        "image3": null,
+      },
+    };
+    fingerDataFp = {
+      "saveFp1": null,
+      "saveFp2": null,
+      "saveFp3": null,
+      "saveFp4": null,
+    };
+    await stopScanning();
+    await initializeFp();
+    setState(() {});
   }
 }

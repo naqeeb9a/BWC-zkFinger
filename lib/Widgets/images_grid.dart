@@ -11,8 +11,12 @@ import 'package:fpzk/utils/app_routes.dart';
 import 'package:fpzk/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shimmer/shimmer.dart';
 import '../Api/api.dart';
+import '../Provider/user_data_provider.dart';
+import '../Screens/Authentication/login.dart';
 import '../Screens/ZKFingerScreen/zk_verification_screen.dart';
 import 'package:flutter_vibrate/flutter_vibrate.dart';
 
@@ -92,6 +96,17 @@ class _ImageGridState extends State<ImageGrid> {
                 }
                 pushPage(page: 1, fingerList: fingerDataFp);
               }
+            } else if (res.statusCode == 501) {
+              bool canVibrate = await Vibrate.canVibrate;
+
+              if (canVibrate) {
+                var type = FeedbackType.light;
+                Vibrate.feedback(type);
+              }
+              SharedPreferences user = await SharedPreferences.getInstance();
+              user.clear();
+              logout();
+              Fluttertoast.showToast(msg: "Token Expired\nPlease Login again");
             } else {
               popPage();
               Fluttertoast.showToast(msg: res.body);
@@ -165,6 +180,9 @@ class _ImageGridState extends State<ImageGrid> {
                         );
                       },
                     );
+            } else if (snapshot.data.statusCode == 501) {
+              logoutUser();
+              return const CustomText(text: "Token Expired login again");
             } else {
               return Center(
                   child: CustomButton(
@@ -199,5 +217,24 @@ class _ImageGridState extends State<ImageGrid> {
         },
       ),
     );
+  }
+
+  logoutUser() async {
+    bool canVibrate = await Vibrate.canVibrate;
+
+    if (canVibrate) {
+      var type = FeedbackType.light;
+      Vibrate.feedback(type);
+    }
+    SharedPreferences user = await SharedPreferences.getInstance();
+    user.clear();
+    logout();
+    Fluttertoast.showToast(msg: "Token Expired, Please Login again");
+  }
+
+  logout() {
+    Provider.of<LoginInfoProvider>(context, listen: false)
+        .changeLoginStatus(false);
+    KRoutes.pushAndRemoveUntil(context, const Login());
   }
 }

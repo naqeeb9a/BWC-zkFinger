@@ -1,7 +1,10 @@
 import 'dart:convert';
 
+import 'package:flutter_vibrate/flutter_vibrate.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:fpzk/Api/api.dart';
 import 'package:fpzk/Provider/user_data_provider.dart';
+import 'package:fpzk/Screens/Authentication/login.dart';
 
 import 'package:fpzk/Widgets/custom_loader.dart';
 import 'package:fpzk/Widgets/images_grid.dart';
@@ -11,10 +14,11 @@ import 'package:fpzk/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../QRScreen/qr_screen.dart';
 
-class DetailScreen extends StatelessWidget {
+class DetailScreen extends StatefulWidget {
   final String? code, id;
   final bool isScan;
 
@@ -22,6 +26,11 @@ class DetailScreen extends StatelessWidget {
       {Key? key, required this.code, required this.id, required this.isScan})
       : super(key: key);
 
+  @override
+  State<DetailScreen> createState() => _DetailScreenState();
+}
+
+class _DetailScreenState extends State<DetailScreen> {
   @override
   Widget build(BuildContext context) {
     var userData = Provider.of<UserDataProvider>(context).userData;
@@ -37,8 +46,8 @@ class DetailScreen extends StatelessWidget {
           appBarHeight: 50),
       body: Center(
         child: FutureBuilder(
-          future: Api.getSocietyInformation(
-              code, id, userData["data"]["oauth"]["access_token"]),
+          future: Api.getSocietyInformation(widget.code, widget.id,
+              userData["data"]["oauth"]["access_token"]),
           builder: (BuildContext context, AsyncSnapshot snapshot) {
             if (snapshot.connectionState == ConnectionState.done) {
               if (snapshot.data != null && snapshot.data.statusCode == 200) {
@@ -185,6 +194,9 @@ class DetailScreen extends StatelessWidget {
                     ],
                   ),
                 );
+              } else if (snapshot.data.statusCode == 501) {
+                logoutUser();
+                return const CustomText(text: "Token Expired login again");
               } else {
                 return Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -211,7 +223,7 @@ class DetailScreen extends StatelessWidget {
                         textColor: kWhite,
                         function: () {
                           KRoutes.pop(context);
-                          if (isScan == true) {
+                          if (widget.isScan == true) {
                             KRoutes.push(context, const QRScreen());
                           }
                         })
@@ -225,5 +237,24 @@ class DetailScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  logoutUser() async {
+    bool canVibrate = await Vibrate.canVibrate;
+
+    if (canVibrate) {
+      var type = FeedbackType.light;
+      Vibrate.feedback(type);
+    }
+    SharedPreferences user = await SharedPreferences.getInstance();
+    user.clear();
+    logout();
+    Fluttertoast.showToast(msg: "Token Expired, Please Login again");
+  }
+
+  logout() {
+    Provider.of<LoginInfoProvider>(context, listen: false)
+        .changeLoginStatus(false);
+    KRoutes.pushAndRemoveUntil(context, const Login());
   }
 }
