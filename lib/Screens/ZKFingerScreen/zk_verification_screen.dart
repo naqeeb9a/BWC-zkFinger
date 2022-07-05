@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_vibrate/flutter_vibrate.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:fpzk/Provider/info_provider.dart';
+import 'package:fpzk/Screens/ZKFingerScreen/updated_text.dart';
 
 import 'package:fpzk/Widgets/widget.dart';
 import 'package:fpzk/utils/app_routes.dart';
@@ -51,16 +52,19 @@ class _ZKVerificationScreenState extends State<ZKVerificationScreen> {
 
   initializeFp() async {
     await methodChannel.invokeMethod("initialize_fingerprint_zk");
-
-    verifyFp();
+    Future.delayed(const Duration(milliseconds: 600), () async {
+      verifyFp();
+    });
   }
 
   updateValue(res) {
-    Provider.of<InfoProvider>(context, listen: false).updateMessage(res);
+    context.read<InfoProvider>().updateMessage(res);
   }
 
   verifyFp() async {
-    await methodChannel.invokeMethod("verify_fingerprint_zk", widget.fingerMap);
+    var res = await methodChannel.invokeMethod(
+        "verify_fingerprint_zk", widget.fingerMap);
+    updateValue(res);
   }
 
   @override
@@ -136,6 +140,10 @@ class _ZKVerificationScreenState extends State<ZKVerificationScreen> {
                   }
                 },
               ),
+              const SizedBox(
+                height: 30,
+              ),
+              const UpdatedText(),
               const SizedBox(
                 height: 30,
               ),
@@ -246,7 +254,6 @@ class _ZKVerificationScreenState extends State<ZKVerificationScreen> {
 
   @override
   void dispose() {
-    eventChannel.receiveBroadcastStream().map((event) => null);
     stopScanning();
     super.dispose();
   }

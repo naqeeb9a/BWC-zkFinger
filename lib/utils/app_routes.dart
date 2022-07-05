@@ -9,8 +9,18 @@ class KRoutes {
     );
   }
 
+  static pushAndReplace(context, Widget page) {
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (context) => page,
+      ),
+    );
+  }
+
   static pop(context) {
-    Navigator.pop(context,);
+    Navigator.pop(
+      context,
+    );
   }
 
   static pushAndRemoveUntil(context, Widget page) {

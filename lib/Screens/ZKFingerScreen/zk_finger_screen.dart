@@ -1,19 +1,22 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:cool_alert/cool_alert.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_vibrate/flutter_vibrate.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:fpzk/Screens/ZKFingerScreen/updated_text.dart';
 import 'package:lottie/lottie.dart';
 import 'package:provider/provider.dart';
-
+import "package:http/http.dart" as http;
 import 'package:fpzk/Screens/ZKFingerScreen/zk_verification_screen.dart';
 import 'package:fpzk/Widgets/widget.dart';
 import 'package:fpzk/utils/app_routes.dart';
 import 'package:fpzk/utils/utils.dart';
 
 import '../../Provider/info_provider.dart';
+import '../../Provider/user_data_provider.dart';
 
 class ZKFingerScreen extends StatefulWidget {
   final Map convertedData;
@@ -29,7 +32,7 @@ class _ZKFingerScreenState extends State<ZKFingerScreen> {
       const MethodChannel("com.example.fpzk/method_channel");
   final EventChannel eventChannel =
       const EventChannel("com.example.fpzk/event_channel");
-  dynamic value;
+
   Map fingerDataFp = {
     "saveFp1": null,
     "saveFp2": null,
@@ -60,13 +63,13 @@ class _ZKFingerScreenState extends State<ZKFingerScreen> {
   };
   dynamic image;
   Uint8List? uListImage;
+
   int fingerIndex = 1;
   int counter = 1;
   int fCounter = 1;
   Stream fpData = const Stream.empty();
   initializeFp() async {
     await methodChannel.invokeMethod("initialize_fingerprint_zk");
-
     Future.delayed(const Duration(milliseconds: 600), () async {
       await enrollScanning();
     });
@@ -78,14 +81,19 @@ class _ZKFingerScreenState extends State<ZKFingerScreen> {
   }
 
   updateValue(res) {
-    Provider.of<InfoProvider>(context, listen: false).updateMessage(res);
+    context.read<InfoProvider>().updateMessage(res);
   }
 
   @override
   void initState() {
     initializeFp();
-
     super.initState();
+  }
+
+  verifyFp() async {
+    var res =
+        await methodChannel.invokeMethod("verify_fingerprint_zk", fingerDataFp);
+    updateValue(res);
   }
 
   pushScreen() {
@@ -101,6 +109,7 @@ class _ZKFingerScreenState extends State<ZKFingerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    var userData = Provider.of<UserDataProvider>(context).userData;
     return Scaffold(
       appBar: BaseAppBar(
           title: "Scan finger",
@@ -137,12 +146,12 @@ class _ZKFingerScreenState extends State<ZKFingerScreen> {
                       if (counter > 3) {
                         fingerIndex++;
                         if (fingerIndex < 5) {
-                          Future.delayed(const Duration(milliseconds: 600), () {
-                            enrollScanning();
-                          });
+                          enrollScanning();
                           counter = 1;
                         } else {
-                          stopScanning();
+                          fCounter = 1;
+                          counter = 1;
+                          verifyFp();
                         }
                       }
                     }
@@ -167,13 +176,16 @@ class _ZKFingerScreenState extends State<ZKFingerScreen> {
                         CustomText(
                           text: snapshot.data["message"].toString(),
                           fontsize: 20,
-                          color: snapshot.data["message"].toString() ==
-                                  "Enroll failed"
+                          color: (snapshot.data["message"].toString() ==
+                                      "Enroll failed" ||
+                                  snapshot.data["message"].toString() ==
+                                      "identify fail")
                               ? Colors.red
                               : snapshot.data["message"].toString() ==
                                       "Enroll successful"
                                   ? Colors.green
                                   : Colors.blue,
+                          textAlign: TextAlign.center,
                         ),
                         const SizedBox(
                           height: 20,
@@ -203,6 +215,10 @@ class _ZKFingerScreenState extends State<ZKFingerScreen> {
               const SizedBox(
                 height: 20,
               ),
+              const UpdatedText(),
+              const SizedBox(
+                height: 20,
+              ),
               CustomButton(
                   buttonColor: primaryColor,
                   text: "Retake fingerprints",
@@ -221,7 +237,7 @@ class _ZKFingerScreenState extends State<ZKFingerScreen> {
               ),
               CustomButton(
                   buttonColor: primaryColor,
-                  text: "Verify fingerprint",
+                  text: "Save fingerprints",
                   textColor: kWhite,
                   function: () async {
                     bool canVibrate = await Vibrate.canVibrate;
@@ -230,11 +246,58 @@ class _ZKFingerScreenState extends State<ZKFingerScreen> {
                       var type = FeedbackType.light;
                       Vibrate.feedback(type);
                     }
-                    if (fingerData["finger2"]!["image3"].length == 0) {
-                      Fluttertoast.showToast(msg: "Register all fingers first");
+                    CoolAlert.show(
+                        context: context,
+                        type: CoolAlertType.loading,
+                        barrierDismissible: false);
+                    var res = await http.post(
+                        Uri.parse(
+                            "http://167.99.236.246/bwc/frontend/web/api/scanner/save-thumb-member-data"),
+                        headers: {
+                          "last_login_token": userData["data"]["oauth"]
+                              ["access_token"],
+                        },
+                        body: {
+                          "member_id": widget.convertedData["data"]
+                                  ["verification"]["member_id"]
+                              .toString(),
+                          "file_id": widget.convertedData["data"]
+                                  ["verification"]["id"]
+                              .toString(),
+                          "thumb_arr": jsonEncode({
+                            "fingerprint1": [
+                              {
+                                "data": fingerDataFp["saveFp1"],
+                                "img": fingerData["finger1"]!["image3"]
+                              }
+                            ],
+                            "fingerprint2": [
+                              {
+                                "data": fingerDataFp["saveFp2"],
+                                "img": fingerData["finger2"]!["image3"]
+                              }
+                            ],
+                            "fingerprint3": [
+                              {
+                                "data": fingerDataFp["saveFp3"],
+                                "img": fingerData["finger3"]!["image3"]
+                              }
+                            ],
+                            "fingerprint4": [
+                              {
+                                "data": fingerDataFp["saveFp4"],
+                                "img": fingerData["finger4"]!["image3"]
+                              }
+                            ],
+                          })
+                        });
+                    if (res.statusCode == 200) {
+                      popScreen();
+                      popScreen();
+                      Fluttertoast.showToast(msg: "Synced successfully");
                     } else {
-                      await stopScanning();
-                      pushScreen();
+                      popScreen();
+                      Fluttertoast.showToast(msg: "Try again");
                     }
                   }),
               const SizedBox(
@@ -259,8 +322,9 @@ class _ZKFingerScreenState extends State<ZKFingerScreen> {
   }
 
   enrollScanning() async {
-    await methodChannel.invokeMethod("enroll_fingerprint_zk");
+    var res = await methodChannel.invokeMethod("enroll_fingerprint_zk");
     fCounter = 2;
+    updateValue(res);
   }
 
   pushpop() {
@@ -270,7 +334,6 @@ class _ZKFingerScreenState extends State<ZKFingerScreen> {
 
   @override
   void dispose() {
-    eventChannel.receiveBroadcastStream((event) => null);
     stopScanning();
     super.dispose();
   }
@@ -460,19 +523,24 @@ class _ZKFingerScreenState extends State<ZKFingerScreen> {
   }
 
   resetLastFp() async {
-    counter = 1;
-    counter = 1;
-    fCounter = 1;
-    fingerData = {
-      "finger$fingerIndex": {
-        "image1": null,
-        "image2": null,
-        "image3": null,
-      },
-    };
-    fingerDataFp = {
-      "saveFp1": null,
-    };
+    if (counter == 1 && fingerIndex > 1) {
+      fingerIndex--;
+      counter = 1;
+      counter = 1;
+      fCounter = 1;
+
+      fingerData["finger$fingerIndex"]!["image1"] = null;
+      fingerData["finger$fingerIndex"]!["image2"] = null;
+      fingerData["finger$fingerIndex"]!["image3"] = null;
+    } else {
+      counter = 1;
+      counter = 1;
+      fCounter = 1;
+      fingerData["finger$fingerIndex"]!["image1"] = null;
+      fingerData["finger$fingerIndex"]!["image2"] = null;
+      fingerData["finger$fingerIndex"]!["image3"] = null;
+    }
+
     await stopScanning();
     await initializeFp();
     setState(() {});

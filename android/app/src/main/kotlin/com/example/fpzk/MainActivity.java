@@ -8,13 +8,12 @@ import android.content.IntentFilter;
 import android.graphics.Bitmap;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbManager;
+import android.os.Build;
 import android.util.Base64;
 import android.util.Log;
-import android.view.View;
-import android.widget.ImageView;
-import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 
 import com.zkteco.android.biometric.core.device.ParameterHelper;
 import com.zkteco.android.biometric.core.device.TransportType;
@@ -34,7 +33,6 @@ import io.flutter.embedding.android.FlutterFragmentActivity;
 import io.flutter.embedding.engine.FlutterEngine;
 import io.flutter.plugin.common.EventChannel;
 import io.flutter.plugin.common.MethodChannel;
-import io.flutter.plugins.GeneratedPluginRegistrant;
 
 public class MainActivity extends FlutterFragmentActivity{
     private static final String CHANNEL_EVENT_FINGERPRINT="com.example.fpzk/event_channel";
@@ -53,6 +51,7 @@ public class MainActivity extends FlutterFragmentActivity{
     private HashMap<String, Object> sinkValue=new HashMap<String, Object>();
     private boolean bstart = false;
     private boolean isRegister = false;
+    private boolean startVerify = false;
     private int uid = 1;
     private final byte[][] regtemparray = new byte[3][2048];  //register template buffer array
     private int enrollidx = 0;
@@ -78,34 +77,34 @@ public class MainActivity extends FlutterFragmentActivity{
         }
     };
 
+    @RequiresApi(api = Build.VERSION_CODES.P)
     public void configureFlutterEngine(@NonNull FlutterEngine flutterEngine) {
         super.configureFlutterEngine(flutterEngine);
         new MethodChannel(flutterEngine.getDartExecutor().getBinaryMessenger(),CHANNEL_METHOD_FINGERPRINT).setMethodCallHandler(
                 (call,result)->{
-                    if(call.method.equals("initialize_fingerprint_zk"))
-                    {
-                        InitDevice();
-                        result.success(startFingerprintSensor());
-                    }
-                    else if(call.method.equals("stop_fingerprint_zk"))
-                    {
+                    switch (call.method) {
+                        case "initialize_fingerprint_zk":
+                            InitDevice();
+                            result.success(startFingerprintSensor());
+                            break;
+                        case "stop_fingerprint_zk":
 
-                        result.success(OnBnStop());
-                    }else if(call.method.equals("enroll_fingerprint_zk"))
-                    {
+                            result.success(OnBnStop());
+                            break;
+                        case "enroll_fingerprint_zk":
 
-                        result.success(OnBnEnroll());
-                    }else if(call.method.equals("verify_fingerprint_zk"))
-                    {
-                        sample1=call.argument("saveFp1");
-                        sample2=call.argument("saveFp2");
-                        sample3=call.argument("saveFp3");
-                        sample4=call.argument("saveFp4");
-                        result.success(OnBnVerify());
-                    }
-                    else
-                    {
-                        result.error("UNAVAILABLE","Not implemented","Try again");
+                            result.success(OnBnEnroll());
+                            break;
+                        case "verify_fingerprint_zk":
+                            sample1 = call.argument("saveFp1");
+                            sample2 = call.argument("saveFp2");
+                            sample3 = call.argument("saveFp3");
+                            sample4 = call.argument("saveFp4");
+                            result.success(OnBnVerify());
+                            break;
+                        default:
+                            result.error("UNAVAILABLE", "Not implemented", "Try again");
+                            break;
                     }
                 }
         );
@@ -185,7 +184,6 @@ public class MainActivity extends FlutterFragmentActivity{
                                            if (enrollidx == 3) {
                                                byte[] regTemp = new byte[2048];
                                                if (0 < (ret = ZKFingerService.merge(regtemparray[0], regtemparray[1], regtemparray[2], regTemp))) {
-//
                                                    System.arraycopy(regTemp, 0, lastRegTemp, 0, ret);
                                                    //Base64 Template
                                                    String strBase64 = Base64.encodeToString(regTemp, 0, ret, Base64.NO_WRAP);
@@ -208,7 +206,7 @@ public class MainActivity extends FlutterFragmentActivity{
                                            }
                                        } else {
                                            byte[] bufids = new byte[256];
-                                           if(verifySample!=null&&verifySample2!=null)
+                                           if(verifySample!=null&&verifySample2!=null &&verifySample3!=null&&verifySample4!=null &&startVerify!=false)
                                            {
                                                verifySample=Base64.decode(sample1,Base64.NO_WRAP);
                                                ZKFingerService.save(verifySample, "test" + uid++);
@@ -226,7 +224,6 @@ public class MainActivity extends FlutterFragmentActivity{
                                                ZKFingerService.save(verifySample4, "test" + uid++);
                                                helperMessage="Enroll successful";
                                                sinkValue.put("message",helperMessage);
-//
 
                                            }
                                            int ret = ZKFingerService.identify(fpTemplate, bufids, 55, 1);
@@ -234,7 +231,7 @@ public class MainActivity extends FlutterFragmentActivity{
                                                String[] strRes = new String(bufids).split("\t");
                                                helperMessage="Identification successful\nscore:" + strRes[1];
                                                sinkValue.put("message",helperMessage);
-//
+                                               ZKFingerService.clear();
                                            } else {
                                                helperMessage="identify fail";
                                                sinkValue.put("message",helperMessage);
@@ -267,7 +264,9 @@ public class MainActivity extends FlutterFragmentActivity{
                }
         );
     }
+    @RequiresApi(api = Build.VERSION_CODES.P)
     private void InitDevice() {
+
         UsbManager musbManager = (UsbManager) this.getSystemService(Context.USB_SERVICE);
         IntentFilter filter = new IntentFilter();
         filter.addAction(ACTION_USB_PERMISSION);
@@ -317,6 +316,7 @@ public class MainActivity extends FlutterFragmentActivity{
     public String OnBnEnroll() {
         if (bstart) {
             isRegister = true;
+            startVerify=false;
             enrollidx = 0;
             helperMessage="You need to press the 3 time fingerprint";
         } else {
@@ -327,8 +327,10 @@ public class MainActivity extends FlutterFragmentActivity{
 
     public String OnBnVerify() {
         if (bstart) {
+            startVerify=true;
             isRegister = false;
             enrollidx = 0;
+            helperMessage="Start Verifying";
         } else {
             helperMessage = "please begin capture first";
         }
