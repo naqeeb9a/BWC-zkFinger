@@ -152,14 +152,15 @@ class _ZKVerificationScreenState extends State<ZKVerificationScreen> {
                   text: "Initialize again",
                   textColor: kWhite,
                   function: () async {
+                    showLoader();
                     bool canVibrate = await Vibrate.canVibrate;
-
                     if (canVibrate) {
                       var type = FeedbackType.light;
                       Vibrate.feedback(type);
                     }
                     await stopScanning();
                     await initializeFp();
+                    popScreen();
                     setState(() {});
                   }),
               const SizedBox(
@@ -250,6 +251,13 @@ class _ZKVerificationScreenState extends State<ZKVerificationScreen> {
 
   popScreen() {
     KRoutes.pop(context);
+  }
+
+  showLoader() {
+    CoolAlert.show(
+        context: context,
+        type: CoolAlertType.loading,
+        barrierDismissible: false);
   }
 
   @override

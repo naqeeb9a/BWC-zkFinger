@@ -9,6 +9,15 @@ class UpdatedText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CustomText(text: "${context.watch<InfoProvider>().message}");
+    return CustomText(
+        text: "${context.watch<InfoProvider>().message}",
+        color: context.watch<InfoProvider>().message == "Finger Scanner Running"
+            ? Colors.green
+            : context.watch<InfoProvider>().message ==
+                    "Start Verifying Fingerprints"
+                ? Colors.lightGreen
+                : Colors.red,
+        fontsize: 25,
+        textAlign: TextAlign.center);
   }
 }

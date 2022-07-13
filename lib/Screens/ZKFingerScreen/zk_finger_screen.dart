@@ -119,194 +119,229 @@ class _ZKFingerScreenState extends State<ZKFingerScreen> {
           appBarHeight: 50),
       body: Center(
         child: SingleChildScrollView(
-          child: Column(
-            children: [
-              const CustomText(
-                text:
-                    "Scan thumb first and then use the index finger 1 to enroll",
-                fontsize: 20,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(
-                height: 10,
-              ),
-              StreamBuilder(
-                stream: getStreamFp(),
-                builder: (BuildContext context, AsyncSnapshot snapshot) {
-                  if (snapshot.hasData && snapshot.data != null) {
-                    image = base64Decode(snapshot.data["image"]);
-                    if (fCounter == 2) {
-                      fingerData["finger$fingerIndex"]!["image$counter"] =
-                          snapshot.data["image"];
-                      counter++;
-                      if (snapshot.data["saveFp"] != null) {
-                        fingerDataFp["saveFp$fingerIndex"] =
-                            snapshot.data["saveFp"];
-                      }
-                      if (counter > 3) {
-                        fingerIndex++;
-                        if (fingerIndex < 5) {
-                          enrollScanning();
-                          counter = 1;
-                        } else {
-                          fCounter = 1;
-                          counter = 1;
-                          verifyFp();
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            child: Column(
+              children: [
+                const CustomText(
+                  text:
+                      "Start with the right thumb first and then use the index finger for scanning",
+                  fontsize: 20,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(
+                  height: 10,
+                ),
+                StreamBuilder(
+                  stream: getStreamFp(),
+                  builder: (BuildContext context, AsyncSnapshot snapshot) {
+                    if (snapshot.hasData && snapshot.data != null) {
+                      image = base64Decode(snapshot.data["image"]);
+                      if (fCounter == 2 &&
+                          snapshot.data["message"].toString() !=
+                              "Please perform the same scan 3 times for the enrollment") {
+                        fingerData["finger$fingerIndex"]!["image$counter"] =
+                            snapshot.data["image"];
+                        counter++;
+                        if (snapshot.data["saveFp"] != null) {
+                          fingerDataFp["saveFp$fingerIndex"] =
+                              snapshot.data["saveFp"];
+                        }
+                        if (counter > 3) {
+                          fingerIndex++;
+                          if (fingerIndex < 5) {
+                            enrollScanning();
+                            counter = 1;
+                          } else {
+                            fCounter = 1;
+                            counter = 1;
+                            verifyFp();
+                          }
                         }
                       }
-                    }
-                    return Column(
-                      children: [
-                        image == null
-                            ? LottieBuilder.asset(
-                                "assets/fpScanner.json",
-                                width: 200,
-                              )
-                            : ClipRRect(
-                                borderRadius: BorderRadius.circular(15),
-                                child: Image.memory(
-                                  image,
-                                  height: 200,
-                                  width: 150,
-                                  fit: BoxFit.cover,
-                                )),
-                        const SizedBox(
-                          height: 15,
-                        ),
-                        CustomText(
-                          text: snapshot.data["message"].toString(),
-                          fontsize: 20,
-                          color: (snapshot.data["message"].toString() ==
-                                      "Enroll failed" ||
-                                  snapshot.data["message"].toString() ==
-                                      "identify fail")
-                              ? Colors.red
-                              : snapshot.data["message"].toString() ==
-                                      "Enroll successful"
-                                  ? Colors.green
-                                  : Colors.blue,
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(
-                          height: 20,
-                        ),
-                        fingerIcons1(),
-                        const SizedBox(
-                          height: 10,
-                        ),
-                        const Divider(
-                          thickness: 1,
-                          color: kblack,
-                        ),
-                        const SizedBox(
-                          height: 10,
-                        ),
-                        fingerIcons2()
-                      ],
-                    );
-                  } else {
-                    return LottieBuilder.asset(
-                      "assets/fpScanner.json",
-                      width: 200,
-                    );
-                  }
-                },
-              ),
-              const SizedBox(
-                height: 20,
-              ),
-              const UpdatedText(),
-              const SizedBox(
-                height: 20,
-              ),
-              CustomButton(
-                  buttonColor: primaryColor,
-                  text: "Retake fingerprints",
-                  textColor: kWhite,
-                  function: () async {
-                    bool canVibrate = await Vibrate.canVibrate;
-
-                    if (canVibrate) {
-                      var type = FeedbackType.light;
-                      Vibrate.feedback(type);
-                    }
-                    resetLastFp();
-                  }),
-              const SizedBox(
-                height: 10,
-              ),
-              CustomButton(
-                  buttonColor: primaryColor,
-                  text: "Save fingerprints",
-                  textColor: kWhite,
-                  function: () async {
-                    bool canVibrate = await Vibrate.canVibrate;
-
-                    if (canVibrate) {
-                      var type = FeedbackType.light;
-                      Vibrate.feedback(type);
-                    }
-                    CoolAlert.show(
-                        context: context,
-                        type: CoolAlertType.loading,
-                        barrierDismissible: false);
-                    var res = await http.post(
-                        Uri.parse(
-                            "http://167.99.236.246/bwc/frontend/web/api/scanner/save-thumb-member-data"),
-                        headers: {
-                          "last_login_token": userData["data"]["oauth"]
-                              ["access_token"],
-                        },
-                        body: {
-                          "member_id": widget.convertedData["data"]
-                                  ["verification"]["member_id"]
-                              .toString(),
-                          "file_id": widget.convertedData["data"]
-                                  ["verification"]["id"]
-                              .toString(),
-                          "thumb_arr": jsonEncode({
-                            "fingerprint1": [
-                              {
-                                "data": fingerDataFp["saveFp1"],
-                                "img": fingerData["finger1"]!["image3"]
-                              }
-                            ],
-                            "fingerprint2": [
-                              {
-                                "data": fingerDataFp["saveFp2"],
-                                "img": fingerData["finger2"]!["image3"]
-                              }
-                            ],
-                            "fingerprint3": [
-                              {
-                                "data": fingerDataFp["saveFp3"],
-                                "img": fingerData["finger3"]!["image3"]
-                              }
-                            ],
-                            "fingerprint4": [
-                              {
-                                "data": fingerDataFp["saveFp4"],
-                                "img": fingerData["finger4"]!["image3"]
-                              }
-                            ],
-                          })
-                        });
-                    if (res.statusCode == 200) {
-                      popScreen();
-                      popScreen();
-                      Fluttertoast.showToast(msg: "Synced successfully");
+                      return Column(
+                        children: [
+                          image == null
+                              ? LottieBuilder.asset(
+                                  "assets/fpScanner.json",
+                                  width: 200,
+                                )
+                              : ClipRRect(
+                                  borderRadius: BorderRadius.circular(15),
+                                  child: Image.memory(
+                                    image,
+                                    height: 200,
+                                    width: 150,
+                                    fit: BoxFit.cover,
+                                  )),
+                          const SizedBox(
+                            height: 15,
+                          ),
+                          CustomText(
+                            text: snapshot.data["message"].toString(),
+                            fontsize: 20,
+                            color: (snapshot
+                                            .data["message"]
+                                            .toString() ==
+                                        "Enroll failed" ||
+                                    snapshot.data["message"].toString() ==
+                                        "identify fail" ||
+                                    snapshot.data["message"].toString() ==
+                                        "Please perform the same scan 3 times for the enrollment")
+                                ? Colors.red
+                                : snapshot.data["message"].toString() ==
+                                        "Enroll successful"
+                                    ? Colors.green
+                                    : Colors.blue,
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(
+                            height: 20,
+                          ),
+                          const CustomText(
+                            text: "Right Hand",
+                            fontsize: 20,
+                          ),
+                          const SizedBox(
+                            height: 10,
+                          ),
+                          fingerIcons1(),
+                          const SizedBox(
+                            height: 10,
+                          ),
+                          const Divider(
+                            thickness: 1,
+                            color: kblack,
+                          ),
+                          const SizedBox(
+                            height: 10,
+                          ),
+                          const CustomText(
+                            text: "Left Hand",
+                            fontsize: 20,
+                          ),
+                          const SizedBox(
+                            height: 10,
+                          ),
+                          fingerIcons2()
+                        ],
+                      );
                     } else {
-                      popScreen();
-                      Fluttertoast.showToast(msg: "Try again");
+                      return LottieBuilder.asset(
+                        "assets/fpScanner.json",
+                        width: 200,
+                      );
                     }
-                  }),
-              const SizedBox(
-                height: 10,
-              ),
-              const SizedBox(
-                height: 10,
-              ),
-            ],
+                  },
+                ),
+                const SizedBox(
+                  height: 20,
+                ),
+                const UpdatedText(),
+                const SizedBox(
+                  height: 20,
+                ),
+                CustomButton(
+                    buttonColor: primaryColor,
+                    text: "Retake fingerprints",
+                    textColor: kWhite,
+                    function: () async {
+                      showLoader();
+                      bool canVibrate = await Vibrate.canVibrate;
+
+                      if (canVibrate) {
+                        var type = FeedbackType.light;
+                        Vibrate.feedback(type);
+                      }
+                      await resetLastFp();
+                      popScreen();
+                    }),
+                const SizedBox(
+                  height: 10,
+                ),
+                CustomButton(
+                    buttonColor: primaryColor,
+                    text: "Save fingerprints",
+                    textColor: kWhite,
+                    function: () async {
+                      if (fingerData["finger4"]!["image3"] != null) {
+                        bool canVibrate = await Vibrate.canVibrate;
+
+                        if (canVibrate) {
+                          var type = FeedbackType.light;
+                          Vibrate.feedback(type);
+                        }
+                        CoolAlert.show(
+                            context: context,
+                            type: CoolAlertType.loading,
+                            barrierDismissible: false);
+                        var res = await http.post(
+                            Uri.parse(
+                                "http://167.99.236.246/bwc/frontend/web/api/scanner/save-thumb-member-data"),
+                            headers: {
+                              "last_login_token": userData["data"]["oauth"]
+                                  ["access_token"],
+                            },
+                            body: {
+                              "member_id": widget.convertedData["data"]
+                                      ["verification"]["member_id"]
+                                  .toString(),
+                              "file_id": widget.convertedData["data"]
+                                      ["verification"]["id"]
+                                  .toString(),
+                              "thumb_arr": jsonEncode({
+                                "fingerprint1": [
+                                  {
+                                    "data": fingerDataFp["saveFp1"],
+                                    "img": fingerData["finger1"]!["image3"]
+                                  }
+                                ],
+                                "fingerprint2": [
+                                  {
+                                    "data": fingerDataFp["saveFp2"],
+                                    "img": fingerData["finger2"]!["image3"]
+                                  }
+                                ],
+                                "fingerprint3": [
+                                  {
+                                    "data": fingerDataFp["saveFp3"],
+                                    "img": fingerData["finger3"]!["image3"]
+                                  }
+                                ],
+                                "fingerprint4": [
+                                  {
+                                    "data": fingerDataFp["saveFp4"],
+                                    "img": fingerData["finger4"]!["image3"]
+                                  }
+                                ],
+                              })
+                            });
+                        if (res.statusCode == 200) {
+                          popScreen();
+                          popScreen();
+                          CoolAlert.show(
+                              context: context,
+                              type: CoolAlertType.info,
+                              text: "Synced successfully");
+                        } else {
+                          popScreen();
+                          Fluttertoast.showToast(msg: "Try again");
+                        }
+                      } else {
+                        CoolAlert.show(
+                            context: context,
+                            type: CoolAlertType.info,
+                            title: "Please Scan all fingers first");
+                      }
+                    }),
+                const SizedBox(
+                  height: 10,
+                ),
+                const SizedBox(
+                  height: 10,
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -522,6 +557,13 @@ class _ZKFingerScreenState extends State<ZKFingerScreen> {
     );
   }
 
+  showLoader() {
+    CoolAlert.show(
+        context: context,
+        type: CoolAlertType.loading,
+        barrierDismissible: false);
+  }
+
   resetLastFp() async {
     if (counter == 1 && fingerIndex > 1) {
       fingerIndex--;
@@ -546,40 +588,40 @@ class _ZKFingerScreenState extends State<ZKFingerScreen> {
     setState(() {});
   }
 
-  resetAllFp() async {
-    fingerIndex = 1;
-    counter = 1;
-    fCounter = 1;
-    fingerData = {
-      "finger1": {
-        "image1": null,
-        "image2": null,
-        "image3": null,
-      },
-      "finger2": {
-        "image1": null,
-        "image2": null,
-        "image3": null,
-      },
-      "finger3": {
-        "image1": null,
-        "image2": null,
-        "image3": null,
-      },
-      "finger4": {
-        "image1": null,
-        "image2": null,
-        "image3": null,
-      },
-    };
-    fingerDataFp = {
-      "saveFp1": null,
-      "saveFp2": null,
-      "saveFp3": null,
-      "saveFp4": null,
-    };
-    await stopScanning();
-    await initializeFp();
-    setState(() {});
-  }
+  // resetAllFp() async {
+  //   fingerIndex = 1;
+  //   counter = 1;
+  //   fCounter = 1;
+  //   fingerData = {
+  //     "finger1": {
+  //       "image1": null,
+  //       "image2": null,
+  //       "image3": null,
+  //     },
+  //     "finger2": {
+  //       "image1": null,
+  //       "image2": null,
+  //       "image3": null,
+  //     },
+  //     "finger3": {
+  //       "image1": null,
+  //       "image2": null,
+  //       "image3": null,
+  //     },
+  //     "finger4": {
+  //       "image1": null,
+  //       "image2": null,
+  //       "image3": null,
+  //     },
+  //   };
+  //   fingerDataFp = {
+  //     "saveFp1": null,
+  //     "saveFp2": null,
+  //     "saveFp3": null,
+  //     "saveFp4": null,
+  //   };
+  //   await stopScanning();
+  //   await initializeFp();
+  //   setState(() {});
+  // }
 }

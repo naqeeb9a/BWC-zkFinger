@@ -174,9 +174,9 @@ public class MainActivity extends FlutterFragmentActivity{
                                            }
 
                                            if (enrollidx > 0 && ZKFingerService.verify(regtemparray[enrollidx - 1], fpTemplate) <= 0) {
-                                               helperMessage="Please scan the same finger 3 times for the enrollment";
+                                               helperMessage="Please perform the same scan 3 times for the enrollment";
                                                sinkValue.put("message",helperMessage);
-//                                               events.success(sinkValue);
+                                               events.success(sinkValue);
                                                return;
                                            }
                                            System.arraycopy(fpTemplate, 0, regtemparray[enrollidx], 0, 2048);
@@ -200,9 +200,8 @@ public class MainActivity extends FlutterFragmentActivity{
                                                }
                                                isRegister = false;
                                            } else {
-                                               helperMessage="Please scan the same finger " + (3 - enrollidx) + " more time";
+                                               helperMessage="Please repeat the scan " + (3 - enrollidx) + " more "+(enrollidx>1?"times":"time");
                                                sinkValue.put("message",helperMessage);
-//                                               events.success(sinkValue);
                                            }
                                        } else {
                                            byte[] bufids = new byte[256];
@@ -285,13 +284,9 @@ public class MainActivity extends FlutterFragmentActivity{
         }
     }
     private String startFingerprintSensor() {
-        // Define output log level
         LogHelper.setLevel(Log.VERBOSE);
-        // Start fingerprint sensor
         Map fingerprintParams = new HashMap();
-        //set vid
         fingerprintParams.put(ParameterHelper.PARAM_KEY_VID, VID);
-        //set pid
         fingerprintParams.put(ParameterHelper.PARAM_KEY_PID, PID);
         fingerprintSensor = FingprintFactory.createFingerprintSensor(this, TransportType.USB, fingerprintParams);
         return  helperMessage;
@@ -299,7 +294,6 @@ public class MainActivity extends FlutterFragmentActivity{
     public String OnBnStop() {
         try {
             if (bstart) {
-                //stop capture
                 fingerprintSensor.stopCapture(0);
                 bstart = false;
                 fingerprintSensor.close(0);
@@ -318,9 +312,9 @@ public class MainActivity extends FlutterFragmentActivity{
             isRegister = true;
             startVerify=false;
             enrollidx = 0;
-            helperMessage="You need to press the 3 time fingerprint";
+            helperMessage="Finger Scanner Running";
         } else {
-            helperMessage="please begin capture first";
+            helperMessage="Unable to start Fingerprint Scanner";
         }
         return  helperMessage;
     }
@@ -330,9 +324,9 @@ public class MainActivity extends FlutterFragmentActivity{
             startVerify=true;
             isRegister = false;
             enrollidx = 0;
-            helperMessage="Start Verifying";
+            helperMessage="Start Verifying Fingerprints";
         } else {
-            helperMessage = "please begin capture first";
+            helperMessage = "Unable to start Fingerprint Scanner";
         }
         return helperMessage;
     }
