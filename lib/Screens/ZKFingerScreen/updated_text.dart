@@ -15,7 +15,7 @@ class UpdatedText extends StatelessWidget {
             ? Colors.green
             : context.watch<InfoProvider>().message ==
                     "Start Verifying Fingerprints"
-                ? Colors.lightGreen
+                ? Colors.orange
                 : Colors.red,
         fontsize: 25,
         textAlign: TextAlign.center);

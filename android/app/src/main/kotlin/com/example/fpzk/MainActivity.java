@@ -205,25 +205,33 @@ public class MainActivity extends FlutterFragmentActivity{
                                            }
                                        } else {
                                            byte[] bufids = new byte[256];
-                                           if(verifySample!=null&&verifySample2!=null &&verifySample3!=null&&verifySample4!=null &&startVerify!=false)
+                                           if(sample1!=null && startVerify==true)
                                            {
                                                verifySample=Base64.decode(sample1,Base64.NO_WRAP);
                                                ZKFingerService.save(verifySample, "test" + uid++);
                                                helperMessage="Enroll successful";
                                                sinkValue.put("message",helperMessage);
+                                           }
+                                           if(sample2!=null && startVerify==true)
+                                           {
                                                verifySample2=Base64.decode(sample2,Base64.NO_WRAP);
                                                ZKFingerService.save(verifySample2, "test" + uid++);
                                                helperMessage="Enroll successful";
                                                sinkValue.put("message",helperMessage);
+                                           }
+                                           if(sample3!=null && startVerify==true)
+                                           {
                                                verifySample3=Base64.decode(sample3,Base64.NO_WRAP);
                                                ZKFingerService.save(verifySample3, "test" + uid++);
                                                helperMessage="Enroll successful";
                                                sinkValue.put("message",helperMessage);
+                                           }
+                                           if(sample4!=null && startVerify==true)
+                                           {
                                                verifySample4=Base64.decode(sample4,Base64.NO_WRAP);
                                                ZKFingerService.save(verifySample4, "test" + uid++);
                                                helperMessage="Enroll successful";
                                                sinkValue.put("message",helperMessage);
-
                                            }
                                            int ret = ZKFingerService.identify(fpTemplate, bufids, 55, 1);
                                            if (ret > 0) {

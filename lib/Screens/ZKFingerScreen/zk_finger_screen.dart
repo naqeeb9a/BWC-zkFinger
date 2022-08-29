@@ -148,15 +148,7 @@ class _ZKFingerScreenState extends State<ZKFingerScreen> {
                               snapshot.data["saveFp"];
                         }
                         if (counter > 3) {
-                          fingerIndex++;
-                          if (fingerIndex < 5) {
-                            enrollScanning();
-                            counter = 1;
-                          } else {
-                            fCounter = 1;
-                            counter = 1;
-                            verifyFp();
-                          }
+                          verifyFp();
                         }
                       }
                       return Column(
@@ -255,6 +247,24 @@ class _ZKFingerScreenState extends State<ZKFingerScreen> {
                       }
                       await resetLastFp();
                       popScreen();
+                    }),
+                const SizedBox(
+                  height: 10,
+                ),
+                CustomButton(
+                    buttonColor: primaryColor,
+                    text: "Next fingerprints",
+                    textColor: kWhite,
+                    function: () async {
+                      fingerIndex++;
+                      if (fingerIndex < 5) {
+                        enrollScanning();
+                        counter = 1;
+                      } else {
+                        fCounter = 1;
+                        counter = 1;
+                        verifyFp();
+                      }
                     }),
                 const SizedBox(
                   height: 10,
